@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reconocimiento de dígitos: búsqueda heurística y algoritmos genéticos</title>
+<style>
+  :root{--bg:#eef1f8;--card:#ffffff;--tx:#1b2236;--mut:#64708a;--bd:#e1e6f0;--ac:#4f46e5;--ac2:#06b6d4;--ok:#059669;--warn:#d97706;--bad:#dc2626;--sh:0 1px 2px rgba(20,30,70,.06),0 8px 24px rgba(20,30,70,.07)}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5;-webkit-font-smoothing:antialiased}
+  header{position:relative;overflow:hidden;color:#fff;padding:44px 20px 70px;background:linear-gradient(125deg,#1e1b4b 0%,#3730a3 45%,#0e7490 100%)}
+  header::before,header::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.07)}
+  header::before{width:380px;height:380px;right:-90px;top:-150px}
+  header::after{width:240px;height:240px;left:-70px;bottom:-130px}
+  .hero{position:relative;max-width:1200px;margin:0 auto}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;background:rgba(255,255,255,.14);padding:5px 12px;border-radius:99px;margin-bottom:14px}
+  h1{font-size:clamp(24px,3.6vw,38px);line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:-.01em;max-width:860px}
+  header p{margin:0;color:#dbe4ff;max-width:760px;font-size:16px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .chips span{font-size:13px;font-weight:600;padding:5px 12px;border-radius:99px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25)}
+  main{max-width:1200px;margin:-40px auto 0;padding:0 16px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;counter-reset:sec;position:relative}
+  section{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:20px;box-shadow:var(--sh);counter-increment:sec}
+  h2{display:flex;align-items:center;gap:10px;font-size:17px;margin:0 0 14px;font-weight:700}
+  h2::before{content:counter(sec);flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--ac),var(--ac2))}
+  button,select,input[type=number]{font:inherit;font-size:14px;padding:9px 14px;border-radius:10px;border:1px solid var(--bd);background:#f7f9fd;color:var(--tx);transition:.15s}
+  select:hover,input[type=number]:hover{border-color:#b9c2da}
+  button{cursor:pointer;font-weight:600;color:#fff;border:0;background:linear-gradient(135deg,var(--ac),#6366f1);box-shadow:0 4px 12px rgba(79,70,229,.3)}
+  button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(79,70,229,.38)}
+  button.sec{background:#f1f4fb;color:var(--tx);border:1px solid var(--bd);box-shadow:none}
+  button.sec:hover:not(:disabled){background:#e8ecf7;transform:none}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input[type=file]{font-size:13px;color:var(--mut);width:100%;padding:14px;border:2px dashed #c4cde3;border-radius:12px;background:#f8faff}
+  input[type=file]::file-selector-button{font:inherit;font-weight:600;font-size:13px;margin-right:12px;padding:7px 12px;border:0;border-radius:8px;color:#fff;background:var(--ac);cursor:pointer}
+  label{font-size:13px;color:var(--mut);font-weight:600;display:flex;align-items:center;gap:8px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0}
+  canvas.pv{width:150px;height:150px;image-rendering:pixelated;border:1px solid var(--bd);background:#fff;border-radius:12px;box-shadow:inset 0 0 0 4px #f4f6fb;display:block}
+  .mut{color:var(--mut);font-size:13px}
+  p.mut{margin:10px 0 0}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700;background:#f6f8fc}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd)}
+  tbody tr:nth-child(even){background:#fafbfe} tbody tr:hover{background:#f1f4ff}
+  tbody td:first-child{font-weight:600}
+  .res{font-size:44px;font-weight:800;margin:10px 0 2px;line-height:1.1;letter-spacing:-.02em}
+  #resInfo{min-height:20px}
+  #log{height:160px;overflow:auto;font:12px ui-monospace,Consolas,monospace;color:#cfe3ff;background:#111a33;border-radius:12px;padding:12px;white-space:pre-wrap;margin-top:12px}
+  svg text{font:13px "Segoe UI",system-ui,sans-serif;fill:var(--tx)}
+  #grafo{background:radial-gradient(circle at center,#f7f9ff 0,#fff 70%);border-radius:14px;border:1px solid var(--bd);max-height:520px}
+  .edge{stroke:#cfd6e8;stroke-width:2;transition:.3s} .edge.on{stroke:var(--ac);stroke-width:3.5}
+  .node circle{fill:#fff;stroke:#9aa6c3;stroke-width:2.5;transition:.3s}
+  .node text{font-weight:700;font-size:15px}
+  #nU circle{fill:#eef0ff;stroke:var(--ac)}
+  .node.gen circle{stroke:var(--warn);fill:#fff7e6}
+  .node.vis circle{fill:var(--ac);stroke:var(--ac)} .node.vis text{fill:#fff}
+  .node.win circle{fill:var(--ok);stroke:var(--ok);filter:drop-shadow(0 0 8px rgba(5,150,105,.55))} .node.win text{fill:#fff}
+  .wide{grid-column:1/-1}
+  .ok{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700}
+  #agOut{margin-top:12px;padding:14px;border-radius:12px;background:#f6f8fc;border:1px solid var(--bd);min-height:48px;max-height:300px;overflow:auto}
+  footer{max-width:1200px;margin:0 auto;padding:6px 16px 36px;color:var(--mut);font-size:13px;text-align:center}
+  @media(max-width:520px){main{grid-template-columns:1fr}.res{font-size:36px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="eyebrow">Inteligencia Artificial · Proyecto de examen</span>
+    <h1>Reconocimiento de dígitos mediante búsqueda heurística y algoritmos genéticos</h1>
+    <p>Una imagen de 28×28 píxeles se analiza, se extraen sus rasgos y se recorre un grafo de candidatos del 0 al 9 para decidir qué dígito es, o devolver NULL.</p>
+    <div class="chips"><span>Extracción de rasgos</span><span>BFS</span><span>DFS</span><span>A*</span><span>Algoritmo genético</span></div>
+  </div>
+</header>
+<main>
+
+<section>
+  <h2>Imagen de entrada</h2>
+  <div class="row">
+    <input type="file" id="file" accept="image/png,image/jpeg">
+  </div>
+  <div class="row">
+    <button class="sec" id="btnEjemplo">Usar dígito de ejemplo</button>
+    <select id="selEjemplo"></select>
+  </div>
+  <div class="row">
+    <div><div class="mut">Original (28×28)</div><canvas id="cvRaw" class="pv" width="28" height="28"></canvas></div>
+    <div><div class="mut">Normalizada y binaria</div><canvas id="cvBin" class="pv" width="28" height="28"></canvas></div>
+  </div>
+  <p class="mut">Se acepta PNG o JPG. Se detecta el fondo, se separa el trazo, se recorta y se centra en 28×28.</p>
+</section>
+
+<section>
+  <h2>Rasgos extraídos</h2>
+  <table id="tblRasgos"><tbody><tr><td class="mut">Carga una imagen para ver los rasgos.</td></tr></tbody></table>
+</section>
+
+<section>
+  <h2>Búsqueda y clasificación</h2>
+  <div class="row">
+    <label>Algoritmo <select id="selAlgo"><option value="astar">A*</option><option value="bfs">BFS</option><option value="dfs">DFS</option></select></label>
+    <label>Umbral τ <input type="number" id="tau" value="1.2" step="0.05" min="0" style="width:80px"></label>
+  </div>
+  <div class="row">
+    <button id="btnClas">Clasificar y animar</button>
+  </div>
+  <div class="res" id="resultado">—</div>
+  <div class="mut" id="resInfo"></div>
+  <div id="log"></div>
+</section>
+
+<section>
+  <h2>Grafo de búsqueda</h2>
+  <svg id="grafo" viewBox="0 0 440 440" width="100%" role="img" aria-label="Grafo con nodo UNKNOWN y diez candidatos"></svg>
+  <p class="mut">Naranja: nodo generado (en la frontera). Azul: visitado/expandido. Verde: resultado. Peso de arista = similitud 1–10 (coste = 11 − similitud).</p>
+</section>
+
+<section>
+  <h2>Costes por candidato</h2>
+  <table id="tblCostes"><tbody><tr><td class="mut">Sin resultados todavía.</td></tr></tbody></table>
+</section>
+
+<section>
+  <h2>Pesos de la función de coste</h2>
+  <table id="tblPesos"></table>
+  <div class="row">
+    <button class="sec" id="btnReset">Restaurar pesos iniciales</button>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Evaluación con 25 imágenes sintéticas</h2>
+  <div class="row"><button id="btnEval">Evaluar 25 pruebas</button><span id="evalRes" class="mut"></span></div>
+  <div style="overflow:auto;max-height:340px"><table id="tblEval"></table></div>
+  <p class="mut">Las pruebas las genera el propio programa (fuentes, posición, grosor y ruido distintos). Sirven para comprobar el sistema, no demuestran precisión en dígitos manuscritos reales.</p>
+</section>
+
+<section class="wide">
+  <h2>Optimización de pesos con algoritmo genético</h2>
+  <div class="row"><button id="btnAG">Optimizar pesos (AG)</button><span class="mut">Población 18 · 12 generaciones · torneo · cruce uniforme · mutación gaussiana · elitismo 2</span></div>
+  <div id="agOut" class="mut" style="white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px"></div>
+  <p class="mut">El AG se entrena con un conjunto sintético y se valida con otro distinto, para no medir sobre los mismos datos.</p>
+</section>
+
+</main>
+<footer>Demostrador educativo · los prototipos se generan con una fuente del navegador y las pruebas son sintéticas.</footer>
+
+<script>
+"use strict";
+const N = 28;
+const NOMBRES_PESOS = ["w_H (huecos)", "w_S (simetría)", "w_D (densidad regional)", "w_E (extremos)", "w_C (componentes)"];
+const PESOS_INICIALES = [1.2, 1.0, 2.0, 0.8, 1.0];
+let pesos = PESOS_INICIALES.slice();
+let rasgosEntrada = null;
+let ocupado = false;
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const cvTmp = document.createElement("canvas");
+cvTmp.width = cvTmp.height = N;
+const ctxTmp = cvTmp.getContext("2d", { willReadFrequently: true });
+
+/* ---------- Procesamiento de imagen ---------- */
+
+// ImageData -> matriz binaria (1 = trazo). El fondo se estima con el borde.
+function binarizar(imgData) {
+  const px = imgData.data, v = new Float32Array(N * N);
+  for (let i = 0; i < N * N; i++) {
+    const a = px[4 * i + 3] / 255;
+    const lum = 0.299 * px[4 * i] + 0.587 * px[4 * i + 1] + 0.114 * px[4 * i + 2];
+    v[i] = lum * a + 255 * (1 - a);
+  }
+  let sb = 0, nb = 0, mn = 255, mx = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const val = v[y * N + x];
+    if (val < mn) mn = val; if (val > mx) mx = val;
+    if (x === 0 || y === 0 || x === N - 1 || y === N - 1) { sb += val; nb++; }
+  }
+  const bg = sb / nb;
+  const thr = Math.max(30, 0.35 * (mx - mn));
+  const b = new Uint8Array(N * N);
+  for (let i = 0; i < N * N; i++) b[i] = Math.abs(v[i] - bg) > thr ? 1 : 0;
+  return b;
+}
+
+// Recorta el trazo, lo escala a un cuadro de 20 px y lo centra en 28×28.
+function normalizar(b) {
+  let x0 = N, y0 = N, x1 = -1, y1 = -1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (b[y * N + x]) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const out = new Uint8Array(N * N);
+  if (x1 < 0) return out;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, s = 20 / Math.max(bw, bh);
+  const tw = Math.max(1, Math.round(bw * s)), th = Math.max(1, Math.round(bh * s));
+  const ox = Math.floor((N - tw) / 2), oy = Math.floor((N - th) / 2);
+  for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
+    const sx0 = x0 + x * bw / tw, sx1 = x0 + (x + 1) * bw / tw;
+    const sy0 = y0 + y * bh / th, sy1 = y0 + (y + 1) * bh / th;
+    const ax = Math.floor(sx0), bx = Math.max(ax, Math.ceil(sx1) - 1);
+    const ay = Math.floor(sy0), by = Math.max(ay, Math.ceil(sy1) - 1);
+    let on = 0;
+    for (let yy = ay; yy <= by && !on; yy++) for (let xx = ax; xx <= bx; xx++) if (b[yy * N + xx]) { on = 1; break; }
+    out[(oy + y) * N + ox + x] = on;
+  }
+  return out;
+}
+
+function procesarCanvas(ctx) {
+  return normalizar(binarizar(ctx.getImageData(0, 0, N, N)));
+}
+
+/* ---------- Rasgos ---------- */
+
+function etiquetar(m, valor, conectividad8, minTam) {
+  // Cuenta componentes de píxeles == valor. Devuelve lista de {tam, tocaBorde}.
+  const vis = new Uint8Array(N * N), comps = [];
+  const vec = conectividad8
+    ? [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]
+    : [[1,0],[-1,0],[0,1],[0,-1]];
+  for (let i = 0; i < N * N; i++) {
+    if (vis[i] || m[i] !== valor) continue;
+    let tam = 0, borde = false; const pila = [i]; vis[i] = 1;
+    while (pila.length) {
+      const c = pila.pop(); tam++;
+      const cx = c % N, cy = (c / N) | 0;
+      if (cx === 0 || cy === 0 || cx === N - 1 || cy === N - 1) borde = true;
+      for (const [dx, dy] of vec) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+        const j = ny * N + nx;
+        if (!vis[j] && m[j] === valor) { vis[j] = 1; pila.push(j); }
+      }
+    }
+    comps.push({ tam, borde });
+  }
+  return comps.filter(c => c.tam >= minTam);
+}
+
+function adelgazar(b) { // Zhang-Suen
+  const a = Uint8Array.from(b); let cambio = true;
+  while (cambio) {
+    cambio = false;
+    for (let pase = 0; pase < 2; pase++) {
+      const borrar = [];
+      for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
+        const i = y * N + x; if (!a[i]) continue;
+        const p2 = a[i - N], p3 = a[i - N + 1], p4 = a[i + 1], p5 = a[i + N + 1],
+              p6 = a[i + N], p7 = a[i + N - 1], p8 = a[i - 1], p9 = a[i - N - 1];
+        const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+        if (B < 2 || B > 6) continue;
+        const sec = [p2, p3, p4, p5, p6, p7, p8, p9, p2]; let A = 0;
+        for (let k = 0; k < 8; k++) if (!sec[k] && sec[k + 1]) A++;
+        if (A !== 1) continue;
+        if (pase === 0) { if (p2 * p4 * p6 !== 0 || p4 * p6 * p8 !== 0) continue; }
+        else { if (p2 * p4 * p8 !== 0 || p2 * p6 * p8 !== 0) continue; }
+        borrar.push(i);
+      }
+      if (borrar.length) { cambio = true; for (const i of borrar) a[i] = 0; }
+    }
+  }
+  return a;
+}
+
+function extraerRasgos(b) {
+  let tinta = 0; for (let i = 0; i < N * N; i++) tinta += b[i];
+  // Huecos: componentes de fondo (4-conexo) que no tocan el borde
+  const huecos = etiquetar(b, 0, false, 3).filter(c => !c.borde).length;
+  // Componentes conexos del trazo (8-conexo), ignorando ruido de 1-2 píxeles
+  const comps = etiquetar(b, 1, true, 3).length;
+  // Simetría izquierda-derecha
+  let coinc = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (b[y * N + x] && b[y * N + (N - 1 - x)]) coinc++;
+  const simetria = tinta ? coinc / tinta : 0;
+  // Densidad por cuadrantes (proporción del área del cuadrante)
+  const q = [0, 0, 0, 0], h = N / 2;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (b[y * N + x]) q[(y >= h ? 2 : 0) + (x >= h ? 1 : 0)]++;
+  const dq = q.map(v => v / (h * h));
+  // Extremos: píxeles del esqueleto con un solo vecino
+  const esq = adelgazar(b); let extremos = 0;
+  for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
+    const i = y * N + x; if (!esq[i]) continue;
+    const v = esq[i-N-1]+esq[i-N]+esq[i-N+1]+esq[i-1]+esq[i+1]+esq[i+N-1]+esq[i+N]+esq[i+N+1];
+    if (v === 1) extremos++;
+  }
+  return { H: huecos, S: simetria, Dq: dq, E: extremos, C: comps, Dt: tinta / (N * N) };
+}
+
+/* ---------- Prototipos y generación sintética ---------- */
+
+function dibujarDigito(d, o = {}) {
+  const c = ctxTmp;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = "#fff"; c.fillRect(0, 0, N, N);
+  c.fillStyle = "#000"; c.strokeStyle = "#000";
+  c.font = `${o.estilo || "bold"} ${o.tam || 22}px ${o.fuente || "Arial, Helvetica, sans-serif"}`;
+  c.textAlign = "center"; c.textBaseline = "middle";
+  const x = N / 2 + (o.dx || 0), y = N / 2 + 1 + (o.dy || 0);
+  c.fillText(String(d), x, y);
+  if (o.grosor) { c.lineWidth = o.grosor; c.lineJoin = "round"; c.strokeText(String(d), x, y); }
+  if (o.ruido) {
+    const id = c.getImageData(0, 0, N, N), p = id.data;
+    for (let i = 0; i < N * N; i++) if (Math.random() < o.ruido) {
+      const v = p[4 * i] < 128 ? 255 : 0; p[4 * i] = p[4 * i + 1] = p[4 * i + 2] = v;
+    }
+    c.putImageData(id, 0, 0);
+  }
+}
+
+let prototipos = [];
+function crearPrototipos() {
+  prototipos = [];
+  for (let d = 0; d < 10; d++) {
+    dibujarDigito(d, { estilo: "bold", fuente: "Arial, Helvetica, sans-serif" });
+    prototipos.push(extraerRasgos(procesarCanvas(ctxTmp)));
+  }
+}
+
+const FUENTES = ["Arial, Helvetica, sans-serif", "Georgia, serif", "'Courier New', monospace", "Verdana, sans-serif", "'Times New Roman', serif"];
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+function generarVariacion(d, tipo) {
+  const o = { estilo: "bold", fuente: "Arial, Helvetica, sans-serif", tam: 22 };
+  const etiquetas = [];
+  const aplicar = t => {
+    if (t === "posición") { o.dx = Math.round(rnd(-3, 3)); o.dy = Math.round(rnd(-3, 3)); }
+    if (t === "grosor") { o.grosor = pick([0, 1, 1.5]); o.estilo = pick(["normal", "bold"]); }
+    if (t === "ruido") { o.ruido = rnd(0.01, 0.03); }
+    if (t === "fuente") { o.fuente = pick(FUENTES); }
+  };
+  const tipos = tipo === "mixta" ? ["posición", "grosor", "ruido", "fuente"].filter(() => Math.random() < 0.6) : [tipo];
+  tipos.forEach(aplicar);
+  dibujarDigito(d, o);
+  return { rasgos: extraerRasgos(procesarCanvas(ctxTmp)), tipo: tipos.join(" + ") || "base" };
+}
+
+/* ---------- Función de coste ---------- */
+
+const norm = f => ({ Hn: Math.min(f.H, 3) / 3, En: Math.min(f.E, 6) / 6, Cn: Math.min(f.C, 4) / 4 });
+
+function costo(fi, fd, w) {
+  const a = norm(fi), b = norm(fd);
+  let dq = 0; for (let r = 0; r < 4; r++) dq += Math.abs(fi.Dq[r] - fd.Dq[r]);
+  return w[0] * Math.abs(a.Hn - b.Hn)
+       + w[1] * Math.abs(fi.S - fd.S)
+       + w[2] * dq / 4
+       + w[3] * Math.abs(a.En - b.En)
+       + w[4] * Math.abs(a.Cn - b.Cn)
+       + 0.25 * Math.abs(fi.Dt - fd.Dt);
+}
+
+function costes(f, w = pesos) { return prototipos.map((p, d) => ({ d, c: costo(f, p, w) })); }
+function mejor(f, w) { return costes(f, w).reduce((m, x) => x.c < m.c ? x : m); }
+
+/* ---------- Grafo ---------- */
+
+const CX = 220, CY = 220, R = 170;
+const posNodo = d => d === "U" ? [CX, CY] : [CX + R * Math.cos(-Math.PI / 2 + d * 2 * Math.PI / 10), CY + R * Math.sin(-Math.PI / 2 + d * 2 * Math.PI / 10)];
+
+function dibujarGrafo(pesosAristas) {
+  const svg = $("grafo"); let h = "";
+  for (let d = 0; d < 10; d++) {
+    const [x, y] = posNodo(d);
+    h += `<line class="edge" id="e${d}" x1="${CX}" y1="${CY}" x2="${x}" y2="${y}"/>`;
+  }
+  for (let d = 0; d < 10; d++) {
+    const [x, y] = posNodo(d);
+    const mx = CX + (x - CX) * 0.55, my = CY + (y - CY) * 0.55;
+    h += `<text id="w${d}" x="${mx}" y="${my}" text-anchor="middle" style="font-size:12px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:4px">${pesosAristas ? pesosAristas[d] : ""}</text>`;
+  }
+  for (let d = 0; d < 10; d++) {
+    const [x, y] = posNodo(d);
+    h += `<g class="node" id="n${d}"><circle cx="${x}" cy="${y}" r="20"/><text x="${x}" y="${y + 5}" text-anchor="middle">${d}</text></g>`;
+  }
+  h += `<g class="node" id="nU"><circle cx="${CX}" cy="${CY}" r="34"/><text x="${CX}" y="${CY + 5}" text-anchor="middle" style="font-size:11px">UNKNOWN</text></g>`;
+  svg.innerHTML = h;
+}
+const marcar = (id, cls) => { const e = $(id); if (e) e.classList.add(cls); };
+const log = t => { const l = $("log"); l.textContent += t + "\n"; l.scrollTop = l.scrollHeight; };
+
+/* ---------- Búsqueda ---------- */
+// Grafo: UNKNOWN -> d (d = 0..9). Coste de arista g(UNKNOWN,d) = J(I,d).
+// A*: f(n) = g(n) + h(n) con h(n) = 0 (admisible y consistente) => equivale a coste uniforme y es óptimo.
+// BFS/DFS: recorren los vecinos en cola/pila y luego se elige el menor coste visitado.
+
+async function clasificar() {
+  if (ocupado || !rasgosEntrada) { if (!rasgosEntrada) alert("Primero carga una imagen o usa el ejemplo."); return; }
+  ocupado = true; $("btnClas").disabled = true;
+  const algo = $("selAlgo").value, tau = parseFloat($("tau").value);
+  const cs = costes(rasgosEntrada), cmin = Math.min(...cs.map(x => x.c)), cmax = Math.max(...cs.map(x => x.c));
+  const sim = cs.map(x => cmax === cmin ? 10 : Math.max(1, Math.min(10, Math.round(10 - 9 * (x.c - cmin) / (cmax - cmin)))));
+  dibujarGrafo(sim); $("log").textContent = ""; $("resultado").textContent = "…"; $("resInfo").textContent = "";
+  marcar("nU", "vis");
+  log(`Algoritmo: ${algo.toUpperCase()} · τ = ${tau}`);
+  log("Se expande UNKNOWN (estado inicial).");
+  await sleep(400);
+
+  let orden = [], elegido = null, expandidos = 0;
+  const visitar = async (d, extra) => {
+    marcar("n" + d, "vis"); marcar("e" + d, "on"); expandidos++;
+    log(`Visita ${d}: coste J = ${cs[d].c.toFixed(3)}${extra || ""}`);
+    await sleep(380);
+  };
+
+  if (algo === "bfs") {
+    const cola = ["U"]; cola.shift();
+    for (let d = 0; d < 10; d++) { cola.push(d); marcar("n" + d, "gen"); }
+    while (cola.length) { const d = cola.shift(); orden.push(d); await visitar(d); }
+    elegido = cs.reduce((m, x) => x.c < m.c ? x : m);
+    log("BFS recorre los 10 vecinos por niveles; se elige el menor coste visitado.");
+  } else if (algo === "dfs") {
+    const pila = [];
+    for (let d = 0; d < 10; d++) { pila.push(d); marcar("n" + d, "gen"); }
+    while (pila.length) { const d = pila.pop(); orden.push(d); await visitar(d); }
+    elegido = cs.reduce((m, x) => x.c < m.c ? x : m);
+    log("DFS recorre los 10 vecinos con una pila (orden inverso); se elige el menor coste visitado.");
+  } else {
+    // A* con cola de prioridad ordenada por f = g + h, h = 0
+    const frontera = cs.map(x => ({ d: x.d, g: x.c, h: 0, f: x.c }));
+    frontera.forEach(n => marcar("n" + n.d, "gen"));
+    log("Frontera generada: f(n) = g(n) + h(n), con g = J(I,d) y h = 0.");
+    await sleep(300);
+    frontera.sort((a, b) => a.f - b.f);
+    const n = frontera.shift(); orden.push(n.d);
+    await visitar(n.d, " ← menor f en la frontera: es objetivo, A* termina");
+    elegido = cs[n.d];
+  }
+
+  const ok = elegido.c <= tau;
+  const win = elegido.d;
+  marcar("n" + win, "win");
+  $("resultado").innerHTML = ok ? `<span class="ok">Dígito ${win}</span>` : `<span class="bad">NULL</span>`;
+  $("resInfo").textContent = `Mejor candidato: ${win} (J = ${elegido.c.toFixed(3)}) · nodos visitados: ${expandidos}/10 · ` +
+    (ok ? `J ≤ τ (${tau}), se acepta.` : `J > τ (${tau}), se rechaza.`);
+  log(ok ? `Resultado: ${win}` : `Resultado: NULL (J mínimo ${elegido.c.toFixed(3)} > τ)`);
+  mostrarCostes(cs, sim);
+  ocupado = false; $("btnClas").disabled = false;
+}
+
+function mostrarCostes(cs, sim) {
+  const filas = cs.map(x => ({ ...x, s: sim[x.d] })).sort((a, b) => a.c - b.c);
+  $("tblCostes").innerHTML = "<thead><tr><th>Candidato</th><th>Coste J</th><th>Similitud (1–10)</th><th>Coste de arista (11−s)</th></tr></thead><tbody>" +
+    filas.map(x => `<tr><td>${x.d}</td><td>${x.c.toFixed(3)}</td><td>${x.s}</td><td>${11 - x.s}</td></tr>`).join("") + "</tbody>";
+}
+
+/* ---------- Interfaz: carga y rasgos ---------- */
+
+function pintarBinaria(b) {
+  const c = $("cvBin").getContext("2d"), id = c.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) { const v = b[i] ? 0 : 255; id.data[4*i] = id.data[4*i+1] = id.data[4*i+2] = v; id.data[4*i+3] = 255; }
+  c.putImageData(id, 0, 0);
+}
+
+function mostrarRasgos(f) {
+  $("tblRasgos").innerHTML = `<tbody>
+    <tr><td>Huecos (H)</td><td>${f.H}</td></tr>
+    <tr><td>Simetría horizontal (S)</td><td>${f.S.toFixed(3)}</td></tr>
+    <tr><td>Densidad por cuadrantes (D)</td><td>${f.Dq.map(v => v.toFixed(2)).join(" · ")}</td></tr>
+    <tr><td>Densidad total</td><td>${f.Dt.toFixed(3)}</td></tr>
+    <tr><td>Extremos (E)</td><td>${f.E}</td></tr>
+    <tr><td>Componentes conexos (C)</td><td>${f.C}</td></tr></tbody>`;
+}
+
+function cargarDesdeCanvasTmp() {
+  $("cvRaw").getContext("2d").drawImage(cvTmp, 0, 0);
+  const b = procesarCanvas(ctxTmp);
+  pintarBinaria(b);
+  rasgosEntrada = extraerRasgos(b);
+  mostrarRasgos(rasgosEntrada);
+  $("resultado").textContent = "—"; $("resInfo").textContent = "";
+}
+
+$("file").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    ctxTmp.setTransform(1, 0, 0, 1, 0, 0);
+    ctxTmp.fillStyle = "#fff"; ctxTmp.fillRect(0, 0, N, N);
+    const s = Math.min(N / img.width, N / img.height), w = img.width * s, h = img.height * s;
+    ctxTmp.drawImage(img, (N - w) / 2, (N - h) / 2, w, h);
+    URL.revokeObjectURL(url);
+    cargarDesdeCanvasTmp();
+  };
+  img.onerror = () => alert("No se pudo leer la imagen.");
+  img.src = url;
+});
+
+$("btnEjemplo").addEventListener("click", () => {
+  const d = parseInt($("selEjemplo").value, 10);
+  dibujarDigito(d, { estilo: "normal", fuente: "Georgia, serif", dx: 2, dy: -1, grosor: 1 });
+  cargarDesdeCanvasTmp();
+});
+$("btnClas").addEventListener("click", clasificar);
+
+/* ---------- Pesos ---------- */
+
+function pintarPesos() {
+  $("tblPesos").innerHTML = "<tbody>" + NOMBRES_PESOS.map((n, i) =>
+    `<tr><td>${n}</td><td>${pesos[i].toFixed(2)}</td></tr>`).join("") + "</tbody>";
+}
+$("btnReset").addEventListener("click", () => { pesos = PESOS_INICIALES.slice(); pintarPesos(); });
+
+/* ---------- Evaluación de 25 pruebas ---------- */
+
+$("btnEval").addEventListener("click", () => {
+  const tipos = ["posición", "grosor", "ruido", "fuente", "mixta"];
+  let aciertos = 0, nulos = 0, html = "<thead><tr><th>#</th><th>Esperado</th><th>Predicho</th><th>Resultado</th><th>Variación</th></tr></thead><tbody>";
+  const tau = parseFloat($("tau").value);
+  for (let i = 0; i < 25; i++) {
+    const d = i % 10, v = generarVariacion(d, tipos[i % tipos.length]);
+    const m = mejor(v.rasgos, pesos), pred = m.c <= tau ? m.d : "NULL";
+    const ok = pred === d; if (ok) aciertos++; if (pred === "NULL") nulos++;
+    html += `<tr><td>${i + 1}</td><td>${d}</td><td>${pred}</td><td class="${ok ? "ok" : "bad"}">${ok ? "Acierto" : "Fallo"}</td><td>${v.tipo}</td></tr>`;
+  }
+  $("tblEval").innerHTML = html + "</tbody>";
+  $("evalRes").textContent = `Aciertos: ${aciertos}/25 (${(aciertos / 25 * 100).toFixed(0)} %) · NULL: ${nulos} · pesos actuales: [${pesos.map(w => w.toFixed(2)).join(", ")}]`;
+});
+
+/* ---------- Algoritmo genético ---------- */
+
+function conjunto(n) {
+  const tipos = ["posición", "grosor", "ruido", "fuente", "mixta"], s = [];
+  for (let i = 0; i < n; i++) { const d = i % 10; s.push({ d, f: generarVariacion(d, tipos[i % 5]).rasgos }); }
+  return s;
+}
+const fitness = (w, set) => 100 * set.filter(x => mejor(x.f, w).d === x.d).length / set.length;
+const acota = v => Math.max(0, Math.min(3, v));
+
+$("btnAG").addEventListener("click", async () => {
+  const btn = $("btnAG"); btn.disabled = true; const out = $("agOut"); out.textContent = "Generando conjuntos de entrenamiento y validación…\n";
+  await sleep(30);
+  const train = conjunto(100), valid = conjunto(60);
+  const TAM = 18, GEN = 12, ELITE = 2;
+  let pob = [PESOS_INICIALES.slice()];
+  while (pob.length < TAM) pob.push(Array.from({ length: 5 }, () => +rnd(0.1, 2.5).toFixed(2)));
+  const inicial = { train: fitness(PESOS_INICIALES, train), valid: fitness(PESOS_INICIALES, valid) };
+  out.textContent += `Pesos iniciales [${PESOS_INICIALES.join(", ")}]: entrenamiento ${inicial.train.toFixed(1)} % · validación ${inicial.valid.toFixed(1)} %\n`;
+  let mejorInd = null, mejorFit = -1, sinMejora = 0;
+  for (let g = 1; g <= GEN; g++) {
+    const ev = pob.map(w => ({ w, fit: fitness(w, train) })).sort((a, b) => b.fit - a.fit);
+    if (ev[0].fit > mejorFit) { mejorFit = ev[0].fit; mejorInd = ev[0].w.slice(); sinMejora = 0; } else sinMejora++;
+    out.textContent += `Gen ${String(g).padStart(2)}: mejor fitness ${ev[0].fit.toFixed(1)} % · media ${(ev.reduce((s, x) => s + x.fit, 0) / ev.length).toFixed(1)} %\n`;
+    out.scrollTop = out.scrollHeight;
+    await sleep(120);
+    if (mejorFit >= 100 || sinMejora >= 6) { out.textContent += "Criterio de parada alcanzado.\n"; break; }
+    const torneo = () => { let b = null; for (let k = 0; k < 3; k++) { const c = pick(ev); if (!b || c.fit > b.fit) b = c; } return b.w; };
+    const nueva = ev.slice(0, ELITE).map(x => x.w.slice());
+    while (nueva.length < TAM) {
+      const a = torneo(), b = torneo();
+      const hijo = a.map((v, i) => Math.random() < 0.5 ? v : b[i]);
+      for (let i = 0; i < 5; i++) if (Math.random() < 0.2) hijo[i] = acota(hijo[i] + (Math.random() + Math.random() + Math.random() - 1.5) * 0.8);
+      nueva.push(hijo.map(v => +v.toFixed(2)));
+    }
+    pob = nueva;
+  }
+  const validFinal = fitness(mejorInd, valid);
+  out.textContent += `\nMejor cromosoma: [${mejorInd.map(v => v.toFixed(2)).join(", ")}]\n` +
+    `Entrenamiento: ${inicial.train.toFixed(1)} % → ${mejorFit.toFixed(1)} %\n` +
+    `Validación (datos distintos): ${inicial.valid.toFixed(1)} % → ${validFinal.toFixed(1)} %\n` +
+    (validFinal >= inicial.valid ? "Los pesos optimizados ya se están usando.\n" : "En validación no mejora; se conservan los pesos anteriores.\n");
+  if (validFinal >= inicial.valid) { pesos = mejorInd.slice(); pintarPesos(); }
+  btn.disabled = false;
+});
+
+/* ---------- Inicio ---------- */
+
+for (let d = 0; d < 10; d++) { const o = document.createElement("option"); o.value = d; o.textContent = "Dígito " + d; $("selEjemplo").appendChild(o); }
+$("selEjemplo").value = "8";
+crearPrototipos();
+dibujarGrafo(null);
+pintarPesos();
+</script>
+</body>
+</html>
